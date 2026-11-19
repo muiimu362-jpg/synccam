@@ -3,7 +3,7 @@ name: Androidアプリを作る
 on:
   push:
     branches: [main]
-    paths: ['android.zip', '.github/workflows/build.yml']
+    paths: ['**.zip', '.github/workflows/build.yml']
   workflow_dispatch:
 
 permissions:
@@ -14,12 +14,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-      - name: android.zip を解凍
+      - name: いちばん新しいzipを解凍（名前が android (1).zip などでもOK）
         run: |
+          Z="$(git log -1 --name-only --pretty=format: -- '*.zip' | grep -v '^$' | head -1)"
+          if [ -z "$Z" ] || [ ! -f "$Z" ]; then Z="$(ls -1 *.zip | head -1)"; fi
+          echo "使うファイル: $Z"
           rm -rf build-src && mkdir build-src
-          unzip -q android.zip -d build-src
-          ls -R build-src | head -40
+          unzip -q "$Z" -d build-src
+          ls build-src
 
       - uses: actions/setup-java@v4
         with:
