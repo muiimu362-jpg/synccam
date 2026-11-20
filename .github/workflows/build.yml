@@ -17,14 +17,13 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: いちばん新しいzipを解凍（名前が android (1).zip などでもOK）
+      - name: いちばん新しいzipを解凍
         run: |
           Z="$(git log -1 --name-only --pretty=format: -- '*.zip' | grep -v '^$' | head -1)"
-          if [ -z "$Z" ] || [ ! -f "$Z" ]; then Z="$(ls -1 *.zip | head -1)"; fi
+          if [ -z "$Z" ] || [ ! -f "$Z" ]; then Z="$(ls -1t *.zip | head -1)"; fi
           echo "使うファイル: $Z"
           rm -rf build-src && mkdir build-src
           unzip -q "$Z" -d build-src
-          ls build-src
 
       - uses: actions/setup-java@v4
         with:
@@ -37,7 +36,14 @@ jobs:
 
       - name: APKを組み立てる
         working-directory: build-src/android
-        run: gradle assembleDebug --no-daemon --stacktrace
+        run: |
+          set -o pipefail
+          gradle assembleDebug --no-daemon 2>&1 | tee ../../build.log
+
+      - name: エラーの原因を表示
+        if: failure()
+        run: |
+          grep -E -A2 "error:|What went wrong" build.log | grep -v "^--$" | head -12 | while IFS= read -r l; do echo "::error::$l"; done
 
       - name: ダウンロードできるように公開
         env:
